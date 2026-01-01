@@ -59,7 +59,7 @@
     max-height: 480px;
     background: #ffffff;
     border-radius: 16px;
-    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.35);
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.35), inset 0 0 0 1px rgba(0, 0, 0, 0.04);
     display: none; /* hidden by default */
     flex-direction: column;
     overflow: hidden;
@@ -88,6 +88,7 @@
     background: #111827;
     color: white;
     padding: 10px 12px;
+    margin: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
