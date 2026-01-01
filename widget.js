@@ -186,10 +186,6 @@
     chatButton.addEventListener("click", () => {
       widget.style.display = "flex";
       chatButton.style.display = "none";
-      if (!body.dataset.greeted) {
-        addMessage(cfg.greeting_message, "bot");
-        body.dataset.greeted = "true";
-      }
       input.focus();
     });
 
@@ -234,6 +230,11 @@
       if (e.key === "Enter") {
         e.preventDefault();
         send();
+      }
+    });
+    input.addEventListener("focus", () => {
+      if (window.matchMedia && window.matchMedia("(max-width: 480px)").matches) {
+        hideMenu();
       }
     });
   }

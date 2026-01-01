@@ -59,6 +59,20 @@
     z-index: 10000;
 }
 
+@media (max-width: 480px) {
+    #chat-widget {
+        width: calc(100vw - 24px);
+        max-height: 75vh;
+        right: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+
+    #chat-button {
+        right: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
 /* Header */
 #chat-header {
     background: #111827;
