@@ -122,6 +122,25 @@
       return;
     }
 
+    function applyLauncherPosition() {
+      if (!chatButton) return;
+      chatButton.style.position = "fixed";
+      chatButton.style.left = "auto";
+      chatButton.style.top = "auto";
+      chatButton.style.zIndex = "9999";
+      if (window.matchMedia && window.matchMedia("(max-width: 480px)").matches) {
+        chatButton.style.right = "12px";
+        chatButton.style.bottom = "calc(12px + env(safe-area-inset-bottom, 0px))";
+      } else {
+        chatButton.style.right = "20px";
+        chatButton.style.bottom = "20px";
+      }
+    }
+
+    applyLauncherPosition();
+    window.addEventListener("resize", applyLauncherPosition);
+    window.addEventListener("orientationchange", applyLauncherPosition);
+
     chatButton.setAttribute("aria-label", "Open chat");
     title.textContent = cfg.business_name;
 
