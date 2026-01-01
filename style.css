@@ -11,6 +11,7 @@
     position: fixed;
     bottom: 20px;
     right: 20px;
+    left: auto;
     background: #1f2937; /* softened slate */
     color: white;
     width: 52px;
@@ -74,6 +75,7 @@
 
     #chat-button {
         right: 12px;
+        left: auto;
         bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     }
 }
