@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stravella Chat Widget</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+    <!-- Chat Widget Button -->
+    <div id="chat-button">Chat</div>
+
+    <!-- Chat Widget Container -->
+    <div id="chat-widget">
+        <div id="chat-header">
+            <span id="chat-header-title">Stravella</span>
+            <button id="close-widget">×</button>
+        </div>
+
+        <!-- Trust & Contact (always visible when provided) -->
+        <div id="chat-trust">
+            <div id="chat-trust-phone"></div>
+            <div id="chat-trust-area"></div>
+        </div>
+
+        <!-- Quick actions (prefill only; no logic) -->
+        <div id="quick-actions"></div>
+
+        <div id="chat-body"></div>
+
+        <div id="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Type your message..." />
+            <button id="send-btn">Send</button>
+        </div>
+    </div>
+
+    <!-- Example config (remove this block in production and provide config via WordPress embed) -->
+    <script>
+      window.StravellaWidgetConfig = {
+        client_id: "stravella-demo",
+        pack_id: "home_services_v1",
+        business_name: "Stravella Assistant",
+        greeting_message: "Hi! I can help you check availability, book an appointment, reschedule, or cancel — right here in chat.",
+        display_phone: "(651) 968-6760",
+        service_area_text: "Serving Minneapolis–Saint Paul (Central Time)",
+        system_error_message: "Sorry — I’m having trouble connecting right now. Please call (651) 968-6760 and we’ll get you taken care of."
+      };
+    </script>
+
+    <script src="widget.js"></script>
+</body>
+</html>
