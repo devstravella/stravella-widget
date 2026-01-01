@@ -1,382 +1,208 @@
-// Base URL for your live FastAPI chatbot
-const API_BASE = "https://stravella-fastapi.onrender.com";
+(() => {
+  const API_BASE = "https://stravella-fastapi.onrender.com";
 
-(function () {
-  "use strict";
+  /* ------------------------------
+     Utilities
+  ------------------------------ */
 
-  function domReady(callback) {
-    if (document.readyState === "interactive" || document.readyState === "complete") {
-      callback();
-      return;
-    }
-
-    const check = () => {
-      if (document.readyState === "interactive" || document.readyState === "complete") {
-        callback();
-      } else {
-        setTimeout(check, 30);
-      }
-    };
-
-    check();
+  function uuid() {
+    if (crypto?.randomUUID) return crypto.randomUUID();
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
   }
 
-  function stravellaGetEmbeddingScriptEl() {
-    const cs = document.currentScript;
-    if (cs) return cs;
-
-    const scripts = Array.from(document.getElementsByTagName("script"));
-    const match = scripts
-      .slice()
-      .reverse()
-      .find((s) => (s.src || "").toLowerCase().includes("widget"));
-    return match || null;
-  }
-
-  function stravellaReadConfigFromDataAttrs(scriptEl) {
-    if (!scriptEl) return {};
-    const d = scriptEl.dataset || {};
-    return {
-      client_id: d.clientId || "",
-      pack_id: d.packId || "",
-      business_name: d.businessName || "",
-      greeting_message: d.greetingMessage || "",
-      display_phone: d.displayPhone || "",
-      service_area_text: d.serviceAreaText || "",
-      system_error_message: d.systemErrorMessage || ""
-    };
-  }
-
-  function stravellaNormalizeConfig(raw) {
+  function getConfig() {
     const defaults = {
       client_id: "unknown-client",
       pack_id: "default-pack",
-      business_name: "Stravella",
+      business_name: "Stravella Assistant",
       greeting_message:
-        "Hi! I can help you check availability, book an appointment, reschedule, or cancel right here in chat.",
+        "Hi! I can help you check availability, book an appointment, reschedule, or cancel — right here in chat.",
       display_phone: "",
       service_area_text: "",
       system_error_message:
-        "Sorry, I'm having trouble connecting right now. Please use the phone number on this page to book.",
+        "Sorry — I’m having trouble connecting right now. Please use the phone number on this page.",
       quick_actions: [
-        { id: "check_availability", label: "Check availability", prefill: "Check availability" },
-        { id: "book", label: "Book appointment", prefill: "Book an appointment" },
-        { id: "reschedule", label: "Reschedule", prefill: "Reschedule my appointment" },
-        { id: "cancel", label: "Cancel", prefill: "Cancel my appointment" }
+        { label: "Check availability", prefill: "Check availability" },
+        { label: "Book appointment", prefill: "Book an appointment" },
+        { label: "Reschedule", prefill: "Reschedule my appointment" },
+        { label: "Cancel", prefill: "Cancel my appointment" }
       ]
     };
 
-    const cfg = { ...defaults, ...(raw || {}) };
-    cfg.quick_actions = defaults.quick_actions;
-
-    cfg.client_id = String(cfg.client_id || "").trim() || defaults.client_id;
-    cfg.pack_id = String(cfg.pack_id || "").trim() || defaults.pack_id;
-    cfg.business_name = String(cfg.business_name || "").trim() || defaults.business_name;
-    cfg.greeting_message = String(cfg.greeting_message || "").trim() || defaults.greeting_message;
-    cfg.display_phone = String(cfg.display_phone || "").trim();
-    cfg.service_area_text = String(cfg.service_area_text || "").trim();
-    cfg.system_error_message =
-      String(cfg.system_error_message || "").trim() || defaults.system_error_message;
-
-    return cfg;
+    return {
+      ...defaults,
+      ...(window.StravellaWidgetConfig || {})
+    };
   }
 
-  function stravellaLoadWidgetConfig() {
-    const scriptEl = stravellaGetEmbeddingScriptEl();
-
-    const fromWindow =
-      typeof window !== "undefined" && window.StravellaWidgetConfig
-        ? window.StravellaWidgetConfig
-        : null;
-
-    const fromAttrs = stravellaReadConfigFromDataAttrs(scriptEl);
-
-    const merged = { ...(fromAttrs || {}), ...(fromWindow || {}) };
-
-    return stravellaNormalizeConfig(merged);
-  }
-
-  function stravellaUuid() {
-    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-
-    const s4 = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
-    return `${s4()}${s4()}-${s4()}-${s4()}-${s4()}-${s4()}${s4()}${s4()}`;
-  }
-
-  function stravellaThreadStorageKey(cfg) {
-    return `stravella_thread_id::${cfg.client_id}::${cfg.pack_id}`;
-  }
-
-  function stravellaGetOrCreateThreadId(cfg) {
-    const key = stravellaThreadStorageKey(cfg);
+  function getThreadId(cfg) {
+    const key = `stravella_thread_id::${cfg.client_id}::${cfg.pack_id}`;
     try {
-      const existing = localStorage.getItem(key);
-      if (existing && existing.trim()) return existing.trim();
-
-      const tid = stravellaUuid();
-      localStorage.setItem(key, tid);
+      let tid = localStorage.getItem(key);
+      if (!tid) {
+        tid = uuid();
+        localStorage.setItem(key, tid);
+      }
       return tid;
-    } catch (e) {
-      return stravellaUuid();
+    } catch {
+      return uuid();
     }
   }
 
-  function ensureWidgetDOM() {
-    let chatButton = document.getElementById("chat-button");
-    if (!chatButton) {
-      chatButton = document.createElement("button");
-      chatButton.id = "chat-button";
-      chatButton.type = "button";
-      chatButton.setAttribute("aria-label", "Open chat");
-      chatButton.textContent = "Chat";
-      document.body.appendChild(chatButton);
-    }
+  /* ------------------------------
+     DOM Injection
+  ------------------------------ */
 
-    let chatWidget = document.getElementById("chat-widget");
-    if (!chatWidget) {
-      chatWidget = document.createElement("div");
-      chatWidget.id = "chat-widget";
-      chatWidget.setAttribute("role", "dialog");
-      chatWidget.setAttribute("aria-modal", "false");
-      chatWidget.setAttribute("aria-label", "Chat widget");
-      document.body.appendChild(chatWidget);
-    }
+  function ensureDOM() {
+    if (document.getElementById("chat-button")) return;
 
-    let header = document.getElementById("chat-header");
-    if (!header) {
-      header = document.createElement("div");
-      header.id = "chat-header";
-      chatWidget.appendChild(header);
-    }
+    const root = document.createElement("div");
+    root.id = "stravella-widget-root";
+    root.innerHTML = `
+      <div id="chat-button">Chat</div>
 
-    let headerTitle = document.getElementById("chat-header-title");
-    if (!headerTitle) {
-      headerTitle = document.createElement("span");
-      headerTitle.id = "chat-header-title";
-      header.appendChild(headerTitle);
-    }
+      <div id="chat-widget" style="display:none;">
+        <div id="chat-header">
+          <span id="chat-title"></span>
+          <button id="chat-close">×</button>
+        </div>
 
-    let closeBtn = document.getElementById("close-widget");
-    if (!closeBtn) {
-      closeBtn = document.createElement("button");
-      closeBtn.id = "close-widget";
-      closeBtn.type = "button";
-      closeBtn.setAttribute("aria-label", "Close chat");
-      closeBtn.textContent = "X";
-      header.appendChild(closeBtn);
-    }
+        <div id="chat-trust">
+          <div id="chat-trust-phone"></div>
+          <div id="chat-trust-area"></div>
+        </div>
 
-    let trustBlock = document.getElementById("chat-trust");
-    if (!trustBlock) {
-      trustBlock = document.createElement("div");
-      trustBlock.id = "chat-trust";
-      chatWidget.appendChild(trustBlock);
-    }
+        <div id="quick-actions"></div>
 
-    let trustPhone = document.getElementById("chat-trust-phone");
-    if (!trustPhone) {
-      trustPhone = document.createElement("div");
-      trustPhone.id = "chat-trust-phone";
-      trustBlock.appendChild(trustPhone);
-    }
+        <div id="chat-body"></div>
 
-    let trustArea = document.getElementById("chat-trust-area");
-    if (!trustArea) {
-      trustArea = document.createElement("div");
-      trustArea.id = "chat-trust-area";
-      trustBlock.appendChild(trustArea);
-    }
-
-    let quickActions = document.getElementById("quick-actions");
-    if (!quickActions) {
-      quickActions = document.createElement("div");
-      quickActions.id = "quick-actions";
-      chatWidget.appendChild(quickActions);
-    }
-
-    let chatBody = document.getElementById("chat-body");
-    if (!chatBody) {
-      chatBody = document.createElement("div");
-      chatBody.id = "chat-body";
-      chatWidget.appendChild(chatBody);
-    }
-
-    let inputArea = document.getElementById("chat-input-area");
-    if (!inputArea) {
-      inputArea = document.createElement("div");
-      inputArea.id = "chat-input-area";
-      chatWidget.appendChild(inputArea);
-    }
-
-    let chatInput = document.getElementById("chat-input");
-    if (!chatInput) {
-      chatInput = document.createElement("textarea");
-      chatInput.id = "chat-input";
-      chatInput.rows = 1;
-      chatInput.setAttribute("placeholder", "Type your message...");
-      inputArea.appendChild(chatInput);
-    }
-
-    let sendBtn = document.getElementById("send-btn");
-    if (!sendBtn) {
-      sendBtn = document.createElement("button");
-      sendBtn.id = "send-btn";
-      sendBtn.type = "button";
-      sendBtn.textContent = "Send";
-      inputArea.appendChild(sendBtn);
-    }
+        <div id="chat-input-area">
+          <input id="chat-input" placeholder="Type your message..." />
+          <button id="chat-send">Send</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(root);
   }
 
-  function applyConfigToUI(cfg, els) {
-    els.chatHeaderTitle.textContent = cfg.business_name;
-
-    const hasPhone = Boolean(cfg.display_phone);
-    const hasArea = Boolean(cfg.service_area_text);
-
-    if (!hasPhone && !hasArea) {
-      els.trustBlock.style.display = "none";
-    } else {
-      els.trustBlock.style.display = "block";
-      els.trustPhone.textContent = cfg.display_phone || "";
-      els.trustArea.textContent = cfg.service_area_text || "";
-    }
-
-    els.quickActions.innerHTML = "";
-    cfg.quick_actions.forEach((a) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "stravella-quick-action-btn";
-      btn.textContent = a.label;
-      btn.addEventListener("click", () => {
-        els.chatInput.value = a.prefill;
-        els.chatInput.focus();
-      });
-      els.quickActions.appendChild(btn);
-    });
-  }
-
-  function scrollChatToBottom(chatBody) {
-    chatBody.scrollTop = chatBody.scrollHeight;
-  }
-
-  function addUserMessage(chatBody, text) {
-    const bubble = document.createElement("div");
-    bubble.classList.add("message", "user");
-    bubble.textContent = text;
-    chatBody.appendChild(bubble);
-    scrollChatToBottom(chatBody);
-  }
-
-  function addBotMessage(chatBody, text) {
-    const bubble = document.createElement("div");
-    bubble.classList.add("message", "bot");
-    bubble.textContent = text;
-    chatBody.appendChild(bubble);
-    scrollChatToBottom(chatBody);
-  }
-
-  async function sendMessageToBot(cfg, threadId, message) {
-    const response = await fetch(`${API_BASE}/os/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message,
-        thread_id: threadId,
-        client_id: cfg.client_id,
-        pack_id: cfg.pack_id,
-        channel: "chat"
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.reply;
-  }
+  /* ------------------------------
+     Main Init
+  ------------------------------ */
 
   function init() {
-    const cfg = stravellaLoadWidgetConfig();
-    const threadId = stravellaGetOrCreateThreadId(cfg);
+    ensureDOM();
 
-    ensureWidgetDOM();
+    const cfg = getConfig();
+    const threadId = getThreadId(cfg);
 
-    const els = {
-      chatButton: document.getElementById("chat-button"),
-      chatWidget: document.getElementById("chat-widget"),
-      closeWidgetBtn: document.getElementById("close-widget"),
-      chatHeaderTitle: document.getElementById("chat-header-title"),
-      trustBlock: document.getElementById("chat-trust"),
-      trustPhone: document.getElementById("chat-trust-phone"),
-      trustArea: document.getElementById("chat-trust-area"),
-      quickActions: document.getElementById("quick-actions"),
-      chatBody: document.getElementById("chat-body"),
-      chatInput: document.getElementById("chat-input"),
-      sendBtn: document.getElementById("send-btn")
-    };
+    const chatButton = document.getElementById("chat-button");
+    const widget = document.getElementById("chat-widget");
+    const closeBtn = document.getElementById("chat-close");
+    const title = document.getElementById("chat-title");
+    const trustPhone = document.getElementById("chat-trust-phone");
+    const trustArea = document.getElementById("chat-trust-area");
+    const quickActions = document.getElementById("quick-actions");
+    const body = document.getElementById("chat-body");
+    const input = document.getElementById("chat-input");
+    const sendBtn = document.getElementById("chat-send");
 
-    if (!els.chatButton || !els.chatWidget || !els.closeWidgetBtn || !els.chatInput || !els.sendBtn) {
+    if (
+      !chatButton ||
+      !widget ||
+      !closeBtn ||
+      !body ||
+      !input ||
+      !sendBtn
+    ) {
+      console.error("Stravella widget failed to initialize");
       return;
     }
 
-    els.chatWidget.style.display = "none";
-    els.chatButton.style.display = "flex";
+    title.textContent = cfg.business_name;
 
-    applyConfigToUI(cfg, els);
+    trustPhone.textContent = cfg.display_phone || "";
+    trustArea.textContent = cfg.service_area_text || "";
 
-    let hasGreeted = false;
+    quickActions.innerHTML = "";
+    cfg.quick_actions.forEach(a => {
+      const b = document.createElement("button");
+      b.textContent = a.label;
+      b.onclick = () => {
+        input.value = a.prefill;
+        input.focus();
+      };
+      quickActions.appendChild(b);
+    });
 
-    els.chatButton.addEventListener("click", () => {
-      els.chatWidget.style.display = "flex";
-      els.chatButton.style.display = "none";
-      els.chatInput.focus();
+    function addMessage(text, who) {
+      const div = document.createElement("div");
+      div.className = `message ${who}`;
+      div.textContent = text;
+      body.appendChild(div);
+      body.scrollTop = body.scrollHeight;
+    }
 
-      if (!hasGreeted) {
-        addBotMessage(els.chatBody, cfg.greeting_message);
-        hasGreeted = true;
+    chatButton.addEventListener("click", () => {
+      widget.style.display = "flex";
+      chatButton.style.display = "none";
+      if (!body.dataset.greeted) {
+        addMessage(cfg.greeting_message, "bot");
+        body.dataset.greeted = "true";
       }
+      input.focus();
     });
 
-    els.closeWidgetBtn.addEventListener("click", () => {
-      els.chatWidget.style.display = "none";
-      els.chatButton.style.display = "flex";
+    closeBtn.addEventListener("click", () => {
+      widget.style.display = "none";
+      chatButton.style.display = "block";
     });
 
-    async function handleSend() {
-      const text = els.chatInput.value.trim();
+    async function send() {
+      const text = input.value.trim();
       if (!text) return;
-
-      addUserMessage(els.chatBody, text);
-      els.chatInput.value = "";
-      els.chatInput.focus();
-
-      els.sendBtn.disabled = true;
+      addMessage(text, "user");
+      input.value = "";
+      sendBtn.disabled = true;
 
       try {
-        const reply = await sendMessageToBot(cfg, threadId, text);
-        addBotMessage(
-          els.chatBody,
-          reply || "I am here and listening, but something went quiet. Try asking again."
-        );
-      } catch (err) {
-        addBotMessage(els.chatBody, cfg.system_error_message);
+        const res = await fetch(`${API_BASE}/os/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: text,
+            thread_id: threadId,
+            client_id: cfg.client_id,
+            pack_id: cfg.pack_id,
+            channel: "chat"
+          })
+        });
+
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        addMessage(data.reply || "", "bot");
+      } catch {
+        addMessage(cfg.system_error_message, "bot");
       } finally {
-        els.sendBtn.disabled = false;
+        sendBtn.disabled = false;
       }
     }
 
-    els.sendBtn.addEventListener("click", () => {
-      handleSend();
-    });
-
-    els.chatInput.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        handleSend();
+    sendBtn.addEventListener("click", send);
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        send();
       }
     });
   }
 
-  domReady(init);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
