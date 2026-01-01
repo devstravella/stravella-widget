@@ -232,11 +232,6 @@
         send();
       }
     });
-    input.addEventListener("focus", () => {
-      if (window.matchMedia && window.matchMedia("(max-width: 480px)").matches) {
-        hideMenu();
-      }
-    });
   }
 
   if (document.readyState === "loading") {
