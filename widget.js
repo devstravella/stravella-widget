@@ -63,7 +63,7 @@
     const root = document.createElement("div");
     root.id = "stravella-widget-root";
     root.innerHTML = `
-      <div id="chat-button">Chat</div>
+      <div id="chat-button" aria-label="Open chat">Chat</div>
 
       <div id="chat-widget" style="display:none;">
         <div id="chat-header">
@@ -122,21 +122,58 @@
       return;
     }
 
+    chatButton.setAttribute("aria-label", "Open chat");
     title.textContent = cfg.business_name;
 
     trustPhone.textContent = cfg.display_phone || "";
     trustArea.textContent = cfg.service_area_text || "";
 
-    quickActions.innerHTML = "";
-    cfg.quick_actions.forEach(a => {
-      const b = document.createElement("button");
-      b.textContent = a.label;
-      b.onclick = () => {
-        input.value = a.prefill;
-        input.focus();
-      };
-      quickActions.appendChild(b);
-    });
+    const intentMenuItems = [
+      { label: "Book an appointment", prefill: "Book an appointment" },
+      { label: "Check availability", prefill: "Check availability" },
+      { label: "Reschedule appointment", prefill: "Reschedule my appointment" },
+      { label: "Cancel appointment", prefill: "Cancel my appointment" },
+      { label: "What are your hours?", prefill: "What are your hours?" },
+      { label: "Where are you located?", prefill: "Where are you located?" }
+    ];
+    let menuHidden = false;
+
+    function hideMenu() {
+      if (menuHidden || !quickActions) return;
+      menuHidden = true;
+      quickActions.style.display = "none";
+    }
+
+    function renderMenu() {
+      if (!quickActions) return;
+      quickActions.innerHTML = "";
+
+      const prompt = document.createElement("div");
+      prompt.className = "intent-menu-prompt";
+      prompt.textContent = "How can I help today?";
+      quickActions.appendChild(prompt);
+
+      const list = document.createElement("ul");
+      list.className = "intent-menu-list";
+      intentMenuItems.forEach(item => {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "intent-menu-item";
+        btn.textContent = item.label;
+        btn.onclick = () => {
+          input.value = item.prefill;
+          input.focus();
+          hideMenu();
+        };
+        li.appendChild(btn);
+        list.appendChild(li);
+      });
+      quickActions.appendChild(list);
+      quickActions.style.display = menuHidden ? "none" : "block";
+    }
+
+    renderMenu();
 
     function addMessage(text, who) {
       const div = document.createElement("div");
@@ -164,6 +201,7 @@
     async function send() {
       const text = input.value.trim();
       if (!text) return;
+      hideMenu();
       addMessage(text, "user");
       input.value = "";
       sendBtn.disabled = true;

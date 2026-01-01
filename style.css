@@ -13,19 +13,34 @@
     right: 20px;
     background: #111827; /* dark slate */
     color: white;
-    border-radius: 999px;
-    padding: 10px 18px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    padding: 0;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 0;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
     z-index: 9999;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
+    transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
 #chat-button::before {
-    content: "💬";
+    content: "";
+    width: 22px;
+    height: 22px;
+    display: block;
+    background: no-repeat center / contain
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z'/%3E%3Cpath d='M8 9h8M8 13h5'/%3E%3C/svg%3E");
+}
+
+#chat-button:hover {
+    background: #0b1220;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28);
 }
 
 /* Chat widget container */
@@ -174,33 +189,52 @@
     color: #374151;
 }
 
-/* Quick actions (prefill only) */
+/* Intent menu (prefill only) */
 #quick-actions {
     padding: 10px 12px;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
     border-bottom: 1px solid #e5e7eb;
     background: #ffffff;
 }
 
-.stravella-quick-action-btn {
-    appearance: none;
-    border: 1px solid #d1d5db;
-    background: #ffffff;
-    color: #111827;
-    border-radius: 999px;
-    padding: 6px 10px;
+.intent-menu-prompt {
     font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.intent-menu-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.intent-menu-list li {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.intent-menu-list li:last-child {
+    border-bottom: none;
+}
+
+.intent-menu-item {
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border: none;
+    background: transparent;
+    color: #111827;
+    font-size: 13px;
     cursor: pointer;
 }
 
-.stravella-quick-action-btn:hover {
-    border-color: #9ca3af;
-}
-
-.stravella-quick-action-btn:active {
-    transform: translateY(1px);
+.intent-menu-item:hover,
+.intent-menu-item:focus {
+    background: #f3f4f6;
+    outline: none;
 }
 
 /* Trust & Contact — intentional framing */
@@ -215,3 +249,4 @@
     font-weight: 500;
     color: #374151;
 }
+
