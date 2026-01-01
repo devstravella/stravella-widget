@@ -9,9 +9,10 @@
 /* Chat button (the little bubble in the corner) */
 #chat-button {
     position: fixed;
-    bottom: 20px;
+    inset: auto 20px 20px auto;
+    top: auto;
     right: 20px;
-    left: auto;
+    bottom: 20px;
     background: #1f2937; /* softened slate */
     color: white;
     width: 52px;
@@ -27,6 +28,7 @@
     justify-content: center;
     position: relative;
     gap: 8px;
+    transform: none;
     transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -74,9 +76,10 @@
     }
 
     #chat-button {
+        inset: auto 12px calc(12px + env(safe-area-inset-bottom, 0px)) auto;
         right: 12px;
-        left: auto;
         bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        left: auto;
     }
 }
 
@@ -91,6 +94,7 @@
     font-size: 14px;
     border-top-left-radius: 16px;
     border-top-right-radius: 16px;
+    background-clip: padding-box;
 }
 
 #chat-header span {
