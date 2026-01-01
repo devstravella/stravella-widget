@@ -59,7 +59,7 @@
     max-height: 480px;
     background: #111827;
     border-radius: 16px;
-    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.35), inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.35);
     display: none; /* hidden by default */
     flex-direction: column;
     overflow: hidden;
@@ -85,6 +85,7 @@
 
 /* Header */
 #chat-header {
+    position: relative;
     background: #111827;
     color: white;
     padding: 10px 12px;
@@ -96,6 +97,19 @@
     border-top-left-radius: 16px;
     border-top-right-radius: 16px;
     background-clip: padding-box;
+}
+
+#chat-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    background: #111827;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    pointer-events: none;
 }
 
 #chat-header span {
