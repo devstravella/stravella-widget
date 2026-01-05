@@ -53,6 +53,20 @@
     }
   }
 
+  function getPersonId() {
+    const key = "stravella_person_id";
+    try {
+      let pid = localStorage.getItem(key);
+      if (!pid) {
+        pid = uuid();
+        localStorage.setItem(key, pid);
+      }
+      return pid;
+    } catch {
+      return uuid();
+    }
+  }
+
   /* ------------------------------
      DOM Injection
   ------------------------------ */
@@ -98,6 +112,7 @@
 
     const cfg = getConfig();
     const threadId = getThreadId(cfg);
+    const personId = getPersonId();
 
     const chatButton = document.getElementById("chat-button");
     const widget = document.getElementById("chat-widget");
@@ -228,6 +243,7 @@
           body: JSON.stringify({
             message: text,
             thread_id: threadId,
+            person_id: personId,
             client_id: cfg.client_id,
             pack_id: cfg.pack_id,
             channel: "chat"
